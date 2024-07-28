@@ -1,7 +1,10 @@
-name: Build Wine WOW64
+name: Build Wine 9.13 Wow64
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -10,46 +13,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: 检出代码
       uses: actions/checkout@v2
 
-    - name: Install dependencies
+    - name: 更新和安装依赖
       run: |
+        sudo dpkg --add-architecture i386
         sudo apt update
-        sudo apt install -y build-essential gcc-multilib g++-multilib libglib2.0-dev libc6-dev libc6-dev-i386 libfreetype6-dev libx11-dev libxext-dev libxrender-dev libxi-dev libxt-dev lib32z1-dev lib32ncurses5-dev libxcomposite-dev libxinerama-dev libxxf86vm-dev libxrandr-dev libxfixes-dev libxml2-dev libasound2-dev libgsm1-dev libjpeg-dev libpng-dev libtiff-dev libxinerama-dev libxrandr-dev liblcms2-dev libgnutls28-dev libavcodec-dev libxcomposite-dev libxcursor-dev libxkbfile-dev libxmu-dev libxpm-dev libxslt1-dev libosmesa6-dev gettext bison flex wget
+        sudo apt install -y gcc-multilib g++-multilib build-essential libfaudio-dev libfaudio0 libfaudio0:i386 libfreetype6-dev libfreetype6-dev:i386 libglib2.0-dev libglib2.0-dev:i386 libgnutls28-dev libgnutls28-dev:i386 libgphoto2-dev libgphoto2-dev:i386 libgstreamer-plugins-base1.0-dev libgstreamer-plugins-base1.0-dev:i386 libgstreamer1.0-dev libgstreamer1.0-dev:i386 libjpeg-dev libjpeg62-turbo-dev:i386 liblcms2-dev liblcms2-dev:i386 libldap2-dev libldap2-dev:i386 libmpg123-dev libmpg123-dev:i386 libopenal-dev libopenal1:i386 libosmesa6-dev libosmesa6-dev:i386 libpcap-dev libpcap-dev:i386 libpulse-dev libpulse-dev:i386 libsane-dev libsane-dev:i386 libsdl2-dev libsdl2-dev:i386 libv4l-dev libv4l-dev:i386 libvulkan-dev libvulkan-dev:i386 libx11-dev libx11-dev:i386 libxcomposite-dev libxcomposite-dev:i386 libxcursor-dev libxcursor-dev:i386 libxext-dev libxext-dev:i386 libxi-dev libxi-dev:i386 libxinerama-dev libxinerama-dev:i386 libxml2-dev libxml2-dev:i386 libxrandr-dev libxrandr-dev:i386 libxrender-dev libxrender-dev:i386 libxslt1-dev libxslt1-dev:i386 libxt-dev libxt-dev:i386 ocl-icd-opencl-dev ocl-icd-opencl-dev:i386 libvkd3d-dev libvkd3d-dev:i386
 
-    - name: Download Wine 9.13 source
+    - name: 下载Wine源代码
       run: |
         wget https://dl.winehq.org/wine/source/9.x/wine-9.13.tar.xz
-        tar -xvf wine-9.13.tar.xz
-
-    - name: Build 64-bit Wine
-      run: |
+        tar -xf wine-9.13.tar.xz
         cd wine-9.13
-        mkdir wine64
-        cd wine64
-        ../configure --prefix=/opt/wine64 --enable-win64
-        make -j$(nproc)
-        sudo make install
 
-    - name: Combine 32-bit and 64-bit Wine
+    - name: 配置和编译64位
       run: |
-        cd wine-9.13/wine64
-        ../configure --prefix=/opt/wine --with-wine64=.
-        make -j$(nproc)
-        sudo make install
+        mkdir build64
+        cd build64
+        ../configure --enable-win64
+        make
 
-    - name: Package Wine binaries
+    - name: 配置和编译32位
       run: |
-        sudo tar -czvf wine-wow64-9.13.tar.gz -C /opt wine
-      # Ensure the artifact is owned by the runner's user
-      env:
-        SUDO_ASKPASS: /bin/true
-        SUDO_USER: ${{ github.actor }}
-        SUDO_UID: ${{ github.actor_id }}
+        cd ..
+        mkdir build32
+        cd build32
+        PKG_CONFIG_PATH=/usr/lib/pkgconfig ../configure --with-wine64=../build64
+        make
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
+    - name: 安装和打包
+      run: |
+        cd ../build64
+        make install DESTDIR=$(pwd)/wine64
+        cd ../build32
+        make install DESTDIR=$(pwd)/wine32
+        cd ..
+        tar -czvf wine-9.13-wow64.tar.gz -C build64/wine64 .
+        tar -czvf wine-9.13-wow64.tar.gz -C build32/wine32 .
+
+    - name: 保存编译结果
+      uses: actions/upload-artifact@v3
       with:
-        name: wine-wow64-9.13
-        path: wine-wow64-9.13.tar.gz
+        name: wine-9.13-wow64
+        path: wine-9.13-wow64.tar.gz
