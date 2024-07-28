@@ -1,0 +1,55 @@
+name: Build Wine WOW64
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential gcc-multilib g++-multilib libglib2.0-dev libc6-dev libc6-dev-i386 libfreetype6-dev libx11-dev libxext-dev libxrender-dev libxi-dev libxt-dev lib32z1-dev lib32ncurses5-dev libxcomposite-dev libxinerama-dev libxxf86vm-dev libxrandr-dev libxfixes-dev libxml2-dev libasound2-dev libgsm1-dev libjpeg-dev libpng-dev libtiff-dev libxinerama-dev libxrandr-dev liblcms2-dev libgnutls28-dev libavcodec-dev libxcomposite-dev libxcursor-dev libxkbfile-dev libxmu-dev libxpm-dev libxslt1-dev libosmesa6-dev gettext bison flex wget
+
+    - name: Download Wine 9.13 source
+      run: |
+        wget https://dl.winehq.org/wine/source/9.x/wine-9.13.tar.xz
+        tar -xvf wine-9.13.tar.xz
+
+    - name: Build 64-bit Wine
+      run: |
+        cd wine-9.13
+        mkdir wine64
+        cd wine64
+        ../configure --prefix=/opt/wine64 --enable-win64
+        make -j$(nproc)
+        sudo make install
+
+    - name: Combine 32-bit and 64-bit Wine
+      run: |
+        cd wine-9.13/wine64
+        ../configure --prefix=/opt/wine --with-wine64=.
+        make -j$(nproc)
+        sudo make install
+
+    - name: Package Wine binaries
+      run: |
+        sudo tar -czvf wine-wow64-9.13.tar.gz -C /opt wine
+      # Ensure the artifact is owned by the runner's user
+      env:
+        SUDO_ASKPASS: /bin/true
+        SUDO_USER: ${{ github.actor }}
+        SUDO_UID: ${{ github.actor_id }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: wine-wow64-9.13
+        path: wine-wow64-9.13.tar.gz
