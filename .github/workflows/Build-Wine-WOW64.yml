@@ -67,6 +67,8 @@ jobs:
         sudo apt install -y libunwind-dev libunwind-dev:i386 || true
         sudo apt install -y libnspr4-dev || true
         sudo apt install -y libnspr4-dev:i386 || true
+        sudo apt install -y libx11-dev:i386 libxext-dev:i386
+
 
     - name: 检查和安装关键32位库
       run: |
