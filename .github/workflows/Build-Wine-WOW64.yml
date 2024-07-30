@@ -95,6 +95,7 @@ jobs:
         ../configure --prefix=/opt/wine32 --with-wine64=../wine64
         make -j$(nproc)
         make install
+        ls -la /opt/wine32
 
     - name: 打包 32 位 Wine 二进制文件
       run: |
