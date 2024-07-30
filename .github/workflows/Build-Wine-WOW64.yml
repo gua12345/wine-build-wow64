@@ -77,35 +77,11 @@ jobs:
         wget https://dl.winehq.org/wine/source/9.x/wine-9.13.tar.xz
         tar -xvf wine-9.13.tar.xz
 
-    - name: 缓存 wine64 编译目录
-      uses: actions/cache@v2
-      with:
-        path: wine-9.13/wine64
-        key: ${{ runner.os }}-wine64-${{ hashFiles('**/wine-9.13.tar.xz') }}
-
-    - name: 编译 64 位 Wine
+    - name: 下载和解压预编译的 wine64 结果
       run: |
-        cd wine-9.13
-        mkdir -p wine64
-        cd wine64
-        ../configure --prefix=/opt/wine64 --enable-win64
-        make -j$(nproc)
-
-    - name: 打包 wine64 编译结果
-      run: |
-        tar -czvf wine64.tar.gz -C wine-9.13/wine64 .
-
-    - name: 上传 wine64 编译结果
-      uses: actions/upload-artifact@v2
-      with:
-        name: wine64
-        path: wine64.tar.gz
-
-    - name: 缓存 wine32 编译目录
-      uses: actions/cache@v2
-      with:
-        path: wine-9.13/wine32
-        key: ${{ runner.os }}-wine32-${{ hashFiles('**/wine-9.13.tar.xz') }}
+        wget https://github.com/gua12345/wine-build-wow64/actions/runs/10155369273/artifacts/1753717777 -O wine64.tar.gz
+        mkdir -p wine-9.13/wine64
+        tar -xzf wine64.tar.gz -C wine-9.13/wine64 --strip-components=1
 
     - name: 编译 32 位 Wine
       run: |
