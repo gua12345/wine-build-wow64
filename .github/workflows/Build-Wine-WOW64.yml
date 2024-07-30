@@ -93,14 +93,13 @@ jobs:
 
     - name: 打包 wine64 编译结果
       run: |
-        cd wine-9.13/wine64
-        tar -czvf wine64.tar.gz -C /opt wine64
+        tar -czvf wine64.tar.gz -C wine-9.13/wine64 .
 
     - name: 上传 wine64 编译结果
       uses: actions/upload-artifact@v2
       with:
         name: wine64
-        path: wine-9.13/wine64/wine64.tar.gz
+        path: wine64.tar.gz
 
     - name: 缓存 wine32 编译目录
       uses: actions/cache@v2
