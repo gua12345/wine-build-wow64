@@ -98,7 +98,7 @@ jobs:
         
     - name: 打包 32 位 Wine 二进制文件
       run: |
-        cd wine-9.13/wine32
+        
         tar -czvf wine32-9.13.tar.gz -C /opt wine32
 
     - name: 上传 32 位构建工件
