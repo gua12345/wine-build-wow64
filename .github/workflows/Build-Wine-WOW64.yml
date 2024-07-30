@@ -80,9 +80,11 @@ jobs:
 
     - name: 下载和解压预编译的 wine64 结果
       run: |
-       wget https://github.com/gua12345/wine-build-wow64/releases/download/9.13/wine64.zip -O wine64.zip
-       mkdir -p wine-9.13/wine64
-       unzip wine64.zip -d wine-9.13/wine64
+        wget https://github.com/gua12345/wine-build-wow64/releases/download/9.13/wine64.zip -O wine64.zip
+        mkdir -p wine-9.13/wine64
+        unzip wine64.zip -d wine-9.13/wine64
+        tar -xzf wine-9.13/wine64/wine64.tar.gz -C wine-9.13/wine64 --strip-components=1
+
     - name: 编译 32 位 Wine
       run: |
         cd wine-9.13
