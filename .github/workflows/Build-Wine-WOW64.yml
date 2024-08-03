@@ -1,8 +1,10 @@
-name: 编译 Wine WOW64
+name: Build Wine WOW64 for ARM
 
 on:
-  workflow_dispatch:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -11,118 +13,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 检出代码库
+    # 1. 检出代码库
+    - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: 缓存依赖项
-      uses: actions/cache@v2
-      with:
-        path: |
-          /usr/include
-          /usr/lib
-          /var/lib/apt/lists
-          /var/cache/apt/archives
-        key: ${{ runner.os }}-wine-dependencies-${{ hashFiles('**/wine-9.13.tar.xz') }}
-        restore-keys: |
-          ${{ runner.os }}-wine-dependencies-
-
-    - name: 安装依赖项
+    # 2. 设置构建环境
+    - name: Set up build environment
       run: |
-        sudo dpkg --add-architecture i386
-        sudo apt update
-        sudo apt install -y --no-install-recommends \
-          build-essential gcc-multilib g++-multilib \
-          libglib2.0-dev libc6-dev libc6-dev-i386 \
-          libfreetype6-dev libfreetype6-dev:i386 \
-          libx11-dev libx11-dev:i386 libxext-dev libxext-dev:i386 \
-          libxrender-dev libxrender-dev:i386 libxi-dev libxi-dev:i386 \
-          libxt-dev libxt-dev:i386 lib32z1-dev lib32ncurses5-dev \
-          libxcomposite-dev libxcomposite-dev:i386 libxinerama-dev libxinerama-dev:i386 \
-          libxxf86vm-dev libxxf86vm-dev:i386 libxrandr-dev libxrandr-dev:i386 \
-          libxfixes-dev libxfixes-dev:i386 libxml2-dev libxml2-dev:i386 \
-          libasound2-dev libasound2-dev:i386 libgsm1-dev libgsm1-dev:i386 \
-          libjpeg-dev libjpeg-dev:i386 libpng-dev libpng-dev:i386 \
-          libtiff-dev libtiff-dev:i386 liblcms2-dev liblcms2-dev:i386 \
-          libgnutls28-dev libgnutls28-dev:i386 libavcodec-dev libavcodec-dev:i386 \
-          libxcursor-dev libxcursor-dev:i386 libxkbfile-dev libxkbfile-dev:i386 \
-          libxmu-dev libxmu-dev:i386 libxpm-dev libxpm-dev:i386 \
-          libxslt1-dev libxslt1-dev:i386 libosmesa6-dev libosmesa6-dev:i386 \
-          gettext bison flex wget \
-          libfontconfig1-dev libfontconfig1-dev:i386 \
-          libnss3-dev libnss3-dev:i386 libnspr4-dev libnspr4-dev:i386 \
-          libgphoto2-dev libgphoto2-dev:i386 libgstreamer1.0-dev libgstreamer1.0-dev:i386 \
-          libgstreamer-plugins-base1.0-dev libgstreamer-plugins-base1.0-dev:i386 \
-          libudev-dev libudev-dev:i386 libsane-dev libsane-dev:i386 \
-          libsdl2-dev libsdl2-dev:i386 libxcomposite-dev libxcomposite-dev:i386 \
-          libxinerama-dev libxinerama-dev:i386 libxrandr-dev libxrandr-dev:i386 \
-          libxtst-dev libxtst-dev:i386 libpulse-dev libpulse-dev:i386 \
-          libmpg123-dev libmpg123-dev:i386 libopenal-dev libopenal-dev:i386 \
-          libncurses5 libncurses5:i386 libv4l-dev libv4l-dev:i386 \
-          libxshmfence-dev libxshmfence-dev:i386 libxxf86dga-dev libxxf86dga-dev:i386 \
-          libkrb5-dev libkrb5-dev:i386 \
-          || true
-    - name: 处理未满足的依赖关系
-      run: |
-        sudo apt-get -f install -y
-        sudo apt install -y libunwind-dev libunwind-dev:i386 || true
-        sudo apt install -y libnspr4-dev || true
-        sudo apt install -y libnspr4-dev:i386 || true
-        sudo apt install -y libx11-dev:i386 libxext-dev:i386
-        sudo apt install -y libfreetype6-dev:i386
+        sudo dpkg --add-architecture armhf
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf gcc-arm-linux-gnueabi g++-arm-linux-gnueabi gcc-multilib g++-multilib flex bison gettext libglib2.0-dev libfreetype6-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libjpeg-dev libpng-dev libosmesa6-dev libx11-dev libxml2-dev libxext-dev libxrender-dev libxslt1-dev
 
-    - name: 检查和安装关键32位库
-      run: |
-        sudo apt install -y gcc-multilib g++-multilib libc6-dev-i386 || true
-        sudo apt install -y lib32z1 lib32stdc++6 || true
-
-    - name: 下载 Wine 9.13 源代码
+    # 3. 下载并解压Wine源代码
+    - name: Download Wine source code
       run: |
         wget https://dl.winehq.org/wine/source/9.x/wine-9.13.tar.xz
         tar -xvf wine-9.13.tar.xz
-
-    - name: 编译 64 位 Wine
-      run: |
         cd wine-9.13
-        mkdir -p wine64
-        cd wine64
-        ../configure --prefix=/opt/wine64 --enable-win64
+
+    # 4. 构建64位版本的Wine
+    - name: Build Wine 64-bit (ARM)
+      run: |
+        mkdir wine64-build
+        cd wine64-build
+        ../wine-9.13/configure --host=aarch64-linux-gnu --prefix=/opt/wine64 --enable-win64
         make -j$(nproc)
         make install
-        ls -la /opt/wine64
+        cd ..
 
-    - name: 编译 32 位 Wine
+    # 5. 导出64位编译结果
+    - name: Export 64-bit Wine build
       run: |
-        cd wine-9.13
-        mkdir -p wine32
-        cd wine32
-        ../configure --prefix=/opt/wine32 --with-wine64=../wine64
-        make -j$(nproc)
-        make install
-        ls -la /opt/wine32
-
-    - name: 打包 32 位 Wine 二进制文件
+        tar -cvzf wine64-arm.tar.gz -C /opt/wine64 .
+# 8. 打包WOW64版本的Wine
+    - name: Package Wine WOW64
       run: |
-        tar -czvf wine32-9.13.tar.gz -C /opt wine32
+        tar -cvzf wine-wow64-arm.tar.gz wine-wow64/
 
-    - name: 上传 32 位构建工件
+    # 9. 上传64位编译结果
+    - name: Upload 64-bit Wine artifact
       uses: actions/upload-artifact@v2
       with:
-        name: wine32-9.13
-        path: wine32-9.13.tar.gz
-        
-    - name: 合并 32 位和 64 位 Wine
+        name: wine64-arm
+        path: wine64-arm.tar.gz
+    # 6. 构建32位版本的Wine
+    - name: Build Wine 32-bit (ARM)
       run: |
-        cd wine-9.13/wine32
-        ../configure --prefix=/opt/wine --with-wine64=../wine64
+        mkdir wine32-build
+        cd wine32-build
+        PKG_CONFIG_PATH=/opt/wine64/lib/pkgconfig ../wine-9.13/configure --host=arm-linux-gnueabihf --prefix=/opt/wine32 --with-wine64=../wine64-build
         make -j$(nproc)
         make install
+        cd ..
 
-    - name: 打包 Wine 二进制文件
+    # 7. 合并32位和64位版本
+    - name: Merge 32-bit and 64-bit Wine
       run: |
-        tar -czvf wine-wow64-9.13.tar.gz -C /opt wine
+        mkdir -p wine-wow64
+        cp -r /opt/wine64/* wine-wow64/
+        cp -r /opt/wine32/* wine-wow64/
 
-    - name: 上传构建工件
+
+    # 10. 上传WOW64版本的Wine
+    - name: Upload WOW64 artifact
       uses: actions/upload-artifact@v2
       with:
-        name: wine-wow64-9.13
-        path: wine-wow64-9.13.tar.gz
+        name: wine-wow64-arm
+        path: wine-wow64-arm.tar.gz
