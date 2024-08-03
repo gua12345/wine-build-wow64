@@ -89,7 +89,18 @@ jobs:
         make -j$(nproc)
         make install
         ls -la /opt/wine64
+        ls -la /opt/wine64/bin
+        
+    - name: 导出 64 位 Wine 编译结果
+      run: |
+        tar -czvf wine64-9.13.tar.gz -C /opt wine64
 
+    - name: 上传 64 位构建工件
+      uses: actions/upload-artifact@v2
+      with:
+        name: wine64-9.13
+        path: wine64-9.13.tar.gz
+        
     - name: 编译 32 位 Wine
       run: |
         cd wine-9.13
